@@ -1,0 +1,20 @@
+lda #$01
+sta $0001
+clc
+adc $0001
+sta $0001
+clc
+adc $0001
+sta $0001
+clc
+adc $0001
+sta $0001
+clc
+adc $0001
+sta $0001
+clc
+adc $0001
+sta $0001
+clc
+adc $0001
+sta $0001

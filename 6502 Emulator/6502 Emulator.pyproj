@@ -25,6 +25,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="in.txt" />
+    <Content Include="in1.txt" />
+    <Content Include="in2.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
