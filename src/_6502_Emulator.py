@@ -1,35 +1,27 @@
-import re
-import os
-import time
-
 """
-6502-like cpu simulation
+This project was created by Petr Hrdina as a semestral project for the class Programming 1 of the year 2022/23 on MFF Charles University.
 
-features - official:
+specifications:
     - 8-bit data bus
     - 16-bit address bus
     - 8-bit ALU, Accumulator, Stack Pointer, Index Registers, Processor Status Register
     - 16-bit Program Counter
-    - 70 instructions
-    - 212 Operation Codes (OpCodes)
 
-src: https://eater.net/datasheets/w65c02s.pdf
 https://www.mdawson.net/vic20chrome/cpu/mos_6500_mpu_preliminary_may_1976.pdf
 https://www.masswerk.at/6502/6502_instruction_set.html
 https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
-
-my features:
-- Register A = accumulator
-- Registers X,Y = index registers
-- Processor Status Register - P
-- Program Counter Register - PC
-- Stack Pointer Register - S ?????
-
 """
+
+import re
+import os
+import time
+from numpy import uint8, uint16
+import readline # only to fix bug on vs code which doesnt have internally this package
+
 
 class CPU():
     def __init__(self):
-        self.RAM = [0]*0xffff
+        self.RAM = bytearray(0x10000)
 
         self.A = 0 # 8-bit
         self.X = 0 # 8-bit
@@ -38,11 +30,12 @@ class CPU():
         self.S = 0 # 8-bit
         self.P = 0 # 8-bit
 
-        self.resetVector = 0x8000
+        self.resetVector = 0x8000 # starting address of the program
 
         self.adrsMode = {"A":0,"abs":1,"abs,X":2, "imm":4,"imp":5,"rel":9}
 
     # ---- GET FLAG METHODS ----
+    """ Following methods return value of flag in the status register """
 
     def GetNegativeFlag(self):
         if self.P & 0b10000000 != 0:
@@ -63,7 +56,8 @@ class CPU():
             return 0
 
     # ---- SET FLAG METHODS ----
-    
+    """ Following methods set flag in the status register to value (0 or 1) """
+
     def SetNegativeFlag(self, value):
         if value == 0:
             self.P = self.P & 0b01111111
@@ -95,13 +89,21 @@ class CPU():
     # ---- HELPER METHODS ----
 
     def IsNegative(self, value):
+        """ Return True is value is negative in the two's complement view of the value """
         if value & 0b10000000 != 0:
             return True
         else:
             return False
 
     def UpdateStatusRegister(self, n=None, z=None, c=None, i=None, d=None, v=None):
-        """If parameter is 0 or 1, set flag to that value, if it is -1 check flag for Accumulator, if -2 check flag for X register"""
+        """ If parameter is 0 or 1, set flag to that value, if it is -1 check flag for Accumulator, if -2 check flag for X register.
+            n - Negative flag
+            z - Zero flag
+            c - Carry flag
+            i - Interrupt flag
+            d - Decimal flag
+            v - Overflow flag
+        """
         
         if n != None:
             if n == 0:
@@ -160,7 +162,7 @@ class CPU():
             value = self.RAM[self.PC+1]
             self.PC += 1
         elif thisMode == self.adrsMode["abs,X"]:
-            address = (self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) & 0xffff
+            address = uint16(self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X)
             value = self.RAM[address]
             self.PC += 2
 
@@ -168,7 +170,7 @@ class CPU():
         isValueNegative = self.IsNegative(value)
 
         sum = self.A + value + self.GetCarryFlag()
-        self.A = sum & 0b11111111
+        self.A = uint8(sum)
 
         if sum > 255:
             cFlag = 1
@@ -211,9 +213,9 @@ class CPU():
     def BCC(self):
         if self.GetCarryFlag() == 0:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
+                self.PC = uint16(self.PC + self.RAM[self.PC+1] - 0x100)
             else:
-                self.PC = (self.PC + self.RAM[self.PC+1]) & 0xffff
+                self.PC = uint16(self.PC + self.RAM[self.PC+1])
 
         self.PC += 1
         return
@@ -221,9 +223,9 @@ class CPU():
     def BCS(self):
         if self.GetCarryFlag() == 1:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
+                self.PC = uint16(self.PC + self.RAM[self.PC+1] - 0x100)
             else:
-                self.PC = (self.PC + self.RAM[self.PC+1]) & 0xffff
+                self.PC = uint16(self.PC + self.RAM[self.PC+1])
 
         self.PC += 1
         return
@@ -231,9 +233,9 @@ class CPU():
     def BEQ(self):
         if self.GetZeroFlag() == 1:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
+                self.PC = uint16(self.PC + self.RAM[self.PC+1] - 0x100)
             else:
-                self.PC = (self.PC + self.RAM[self.PC+1]) & 0xffff
+                self.PC = uint16(self.PC + self.RAM[self.PC+1])
 
         self.PC += 1
         return
@@ -241,9 +243,9 @@ class CPU():
     def BMI(self):
         if self.GetNegativeFlag() == 1:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
+                self.PC = uint16(self.PC + self.RAM[self.PC+1] - 0x100)
             else:
-                self.PC = (self.PC + self.RAM[self.PC+1]) & 0xffff
+                self.PC = uint16(self.PC + self.RAM[self.PC+1])
 
         self.PC += 1
         return
@@ -251,9 +253,9 @@ class CPU():
     def BNE(self):
         if self.GetZeroFlag() == 0:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
+                self.PC = uint16(self.PC + self.RAM[self.PC+1] - 0x100)
             else:
-                self.PC = (self.PC + self.RAM[self.PC+1]) & 0xffff
+                self.PC = uint16(self.PC + self.RAM[self.PC+1])
 
         self.PC += 1
         return
@@ -261,9 +263,9 @@ class CPU():
     def BPL(self):
         if self.GetNegativeFlag() == 0:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
+                self.PC = uint16(self.PC + self.RAM[self.PC+1] - 0x100)
             else:
-                self.PC = (self.PC + self.RAM[self.PC+1]) & 0xffff
+                self.PC = uint16(self.PC + self.RAM[self.PC+1])
 
         self.PC += 1
         return
@@ -291,7 +293,7 @@ class CPU():
             zFlag = 0
             cFlag = 1
 
-        result = (self.A - value) % 256
+        result = uint8(self.A - value)
 
         if self.IsNegative(result):
             nFlag = 1
@@ -302,9 +304,7 @@ class CPU():
         return
 
     def DEX(self):
-        self.X = self.X - 1
-        self.X = self.X % 256
-        
+        self.X = uint8(self.X - 1)        
 
         self.UpdateStatusRegister(n=-2, z=-2)
         return
@@ -323,8 +323,7 @@ class CPU():
         return
 
     def INX(self):
-        self.X = self.X + 1
-        self.x = self.X % 256
+        self.X = uint8(self.X + 1)
 
         self.UpdateStatusRegister(n=-2, z=-2)
         return
@@ -341,7 +340,7 @@ class CPU():
             self.PC += 2
             self.A = self.RAM[address]
         elif thisMode == self.adrsMode["abs,X"]:            
-            address = (self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) & 0xffff
+            address = uint16(self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X)
             self.PC += 2
             self.A = self.RAM[address] 
         elif thisMode == self.adrsMode["imm"]:
@@ -392,7 +391,6 @@ class CPU():
         self.UpdateStatusRegister(n=-1, z=-1)
         return
 
-
     def ROL(self, thisMode):
         if thisMode == self.adrsMode["A"]:
             if self.A & 0x80 != 0:
@@ -400,7 +398,7 @@ class CPU():
             else:
                 cFlag = 0
 
-            self.A = ((self.A << 1) & 0xff) + self.GetCarryFlag()
+            self.A = (uint8(self.A << 1)) + self.GetCarryFlag()
 
         self.UpdateStatusRegister(n=-1, z=-1, c=cFlag)
         return
@@ -423,7 +421,7 @@ class CPU():
             value = self.RAM[address] + (self.GetCarryFlag() - 1)
             self.PC += 2
         elif thisMode == self.adrsMode["abs,X"]:
-            address = (self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) & 0xffff
+            address = uint16(self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X)
             value = self.RAM[address] + (self.GetCarryFlag() - 1)
             self.PC += 2
         elif thisMode == self.adrsMode["imm"]:
@@ -438,7 +436,7 @@ class CPU():
         else:
             cFlag = 0
 
-        self.A = (self.A - value) % 256
+        self.A = uint8(self.A - value)
 
         if isANegative != isValueNegative and isANegative != self.IsNegative(self.A):
             vFlag = 1
@@ -457,7 +455,7 @@ class CPU():
             address = self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8)
             self.PC += 2
         elif thisMode == self.adrsMode["abs,X"]:
-            address = (self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) & 0xffff
+            address = uint16(self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X)
             self.PC += 2
 
         self.RAM[address] = self.A
@@ -486,6 +484,7 @@ class CPU():
     # ---- INPUT METHODS ----
 
     def HexInputConsole(self):
+        """ Line by line writes input in hexadecimal into memory, until line is empy """
         counter = self.resetVector
         line = input()
         while line != '':
@@ -495,9 +494,11 @@ class CPU():
                 counter += 1
 
             line = input()
+        return
 
     def HexInputFile(self):
-        with open("in.txt") as f:
+        """ Writes input from file 'in.txt' to memory """
+        with open(f"{os.path.dirname(os.path.realpath(__file__))}/in.txt") as f:
             counter = self.resetVector
             line = f.readline()
             while True:
@@ -515,6 +516,7 @@ class CPU():
         return
 
     def Translate(self, line, counter):
+        """ Helper method of the assembly input methods. Matches line written in assembly with hexadecimal eqvivalent and writes it to memory. """
         line = line.split()
 
         if len(line) == 1:
@@ -665,7 +667,7 @@ class CPU():
 
     def AssemblyInputFile(self):
         counter = self.resetVector
-        with open("in.txt") as f:
+        with open(f"{os.path.dirname(os.path.realpath(__file__))}/in.txt") as f:
             line = f.readline()
             while True:
                 endOfFile = not line.endswith("\n")
@@ -682,6 +684,10 @@ class CPU():
     # ---- DEBUG MODE ----
     
     def Encode(self, index):
+        """ Encodes instruction on index in RAM from hexadecimal to assembly eqvivalent - stored in ins_s.
+            Returns this string instruction and index of the next instruction.
+        """
+
         ins = self.RAM[index]
 
         if ins == 0x69:
@@ -828,15 +834,10 @@ class CPU():
         index += 1
 
         return ins_s, index
-    
-    """
-    print(u"\u001b[32;1m", end='') # green
-    print(u"\u001b[36;1m", end='') # cyan
-    print(u"\u001b[33;1m", end='') # yellow
-    print(u"\u001b[0m", end='') # reset
-    """
 
     def PrintDebug(self, insIndex, dataIndex, colors):
+        """ Prints debug screen with x instructions in assembly in the top, y lines of hexdump of memory on the bottom, and on the right prints contents of CPU registers. """
+
         print()
         clear()
         for i in range(15):
@@ -924,11 +925,16 @@ class CPU():
     # ---- MAIN LOOP ----
 
     def Run(self, debug = 0, colors = False):
+        """ Main loop which steps the instructions in memory and executes them until reaches a break or not known instruction.
+            At the end of program prints interactive debug screen, where user can view data in specific locations in memory.
+            If debug mode is enabled, after every step interactive debug screen is printed, which also allows user to step through the program.
+        """
+
         self.PC = self.resetVector
-        stepper = 0
-        dataIndex = 0
-        insIndex = self.PC
-        exit = False # indicator if end program without ending debug screen
+        stepper = 0         # number of steps to be done without debug screen
+        dataIndex = 0       # starting location of data in memory displayed in debug screen
+        insIndex = self.PC  # starting location of instructions in memory displayed in debug screen
+        exit = False        # indicator if end the program without an ending debug screen
 
         while True:
             if debug == 1:
@@ -936,6 +942,7 @@ class CPU():
                 self.PrintDebug(insIndex, dataIndex, colors)
 
             if debug == 1 and stepper == 0:
+                # interactive debug screen
                 execute = False # indicator if command executes another instruction
                 while not execute:
                     command = input().split()
@@ -968,7 +975,7 @@ class CPU():
                         input()
                         self.PrintDebug(insIndex, dataIndex, colors)
                     
-            if stepper > 0:
+            if stepper > 0:         # if there are yet steps without debug screen to be done
                 time.sleep(0.75)
                 stepper -= 1
 
@@ -1054,11 +1061,12 @@ class CPU():
                 self.TAX()
             elif ins == 0x8A:
                 self.TXA()
-            else:
+            else:   # not an instruction
                 break
             
             self.PC += 1
         
+        # interactive debug screen at the end of program
         insIndex = self.PC
         while not exit:
             self.PrintDebug(insIndex, dataIndex, colors)
@@ -1090,13 +1098,14 @@ def clear():
         else:
             _ = os.system('clear')
 
-source = 0     # 0 - console, 1 - file
-inputFormat = 0       # 0 - hex,     1 - assembly
-color = False  # 0 - off,     1 - on
-mode = 0       # 0 - run,     1 - debug
+source = 0          # 0 - console, 1 - file
+inputFormat = 0     # 0 - hex,     1 - assembly
+color = False       # 0 - off,     1 - on
+mode = 0            # 0 - run,     1 - debug
 correctConfig = True
 
-with open("config.txt", "r") as f:
+# reading configuration
+with open(f"{os.path.dirname(os.path.realpath(__file__))}/config.txt", "r") as f:
     line = f.readline()[:-1]
     if line == "source=console":
         source = 0
