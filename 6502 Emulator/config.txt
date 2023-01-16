@@ -1,0 +1,4 @@
+source=file
+format=assembly
+color=on
+mode=debug

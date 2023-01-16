@@ -1,11 +1,20 @@
 lda #$01
-sta $0002
-lda $0001
-clc
-adc $0002
 sta $0001
-lda $0001
 clc
-adc $0002
-sta $0002
-jmp $8005
+adc $0001
+sta $0001
+clc
+adc $0001
+sta $0001
+clc
+adc $0001
+sta $0001
+clc
+adc $0001
+sta $0001
+clc
+adc $0001
+sta $0001
+clc
+adc $0001
+sta $0001

@@ -24,6 +24,7 @@
     <Compile Include="_6502_Emulator.py" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="config.txt" />
     <Content Include="in.txt" />
     <Content Include="in1.txt" />
     <Content Include="in2.txt" />
