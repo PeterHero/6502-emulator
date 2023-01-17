@@ -96,7 +96,7 @@ class CPU():
             return False
 
     def UpdateStatusRegister(self, n=None, z=None, c=None, i=None, d=None, v=None):
-        """ If parameter is 0 or 1, set flag to that value, if it is -1 check flag for Accumulator, if -2 check flag for X register.
+        """ If parameter is 0 or 1, set flag to that value, if it is -1 check flag for Accumulator, if -2 check flag for X register, -3 for Y.
             n - Negative flag
             z - Zero flag
             c - Carry flag
@@ -120,6 +120,11 @@ class CPU():
                     self.SetNegativeFlag(1)
                 else:
                     self.SetNegativeFlag(0)
+            elif n == -3:
+                if self.IsNegative(self.Y):
+                    self.SetNegativeFlag(1)
+                else:
+                    self.SetNegativeFlag(0)
 
         if z != None:
             if z == 0:
@@ -133,6 +138,11 @@ class CPU():
                     self.SetZeroFlag(0)
             elif z == -2:
                 if self.X == 0:
+                    self.SetZeroFlag(1)
+                else:
+                    self.SetZeroFlag(0)
+            elif z == -3:
+                if self.Y == 0:
                     self.SetZeroFlag(1)
                 else:
                     self.SetZeroFlag(0)
@@ -279,6 +289,10 @@ class CPU():
             address = self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8)
             value = self.RAM[address]
             self.PC += 2
+        elif thisMode == self.adrsMode["abs,X"]:            
+            address = uint16(self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X)
+            value = self.RAM[address]
+            self.PC += 2
         elif thisMode == self.adrsMode["imm"]:
             value = self.RAM[self.PC+1]
             self.PC += 1
@@ -309,6 +323,12 @@ class CPU():
         self.UpdateStatusRegister(n=-2, z=-2)
         return
 
+    def DEY(self):
+        self.Y = uint8(self.Y - 1)        
+
+        self.UpdateStatusRegister(n=-3, z=-3)
+        return
+
     def EOR(self, thisMode):
         if thisMode == self.adrsMode["abs"]:
             address = self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8)
@@ -326,6 +346,12 @@ class CPU():
         self.X = uint8(self.X + 1)
 
         self.UpdateStatusRegister(n=-2, z=-2)
+        return
+    
+    def INY(self):
+        self.Y = uint8(self.Y + 1)
+
+        self.UpdateStatusRegister(n=-3, z=-3)
         return
 
     def JMP(self, thisMode):
@@ -364,6 +390,20 @@ class CPU():
             
 
         self.UpdateStatusRegister(n=-2, z=-2)
+        return
+
+    def LDY(self, thisMode):
+        if thisMode == self.adrsMode["abs"]:            
+            address = self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8)
+            self.PC += 2
+            self.Y = self.RAM[address]            
+        elif thisMode == self.adrsMode["imm"]:
+            value = self.RAM[self.PC+1]
+            self.PC += 1
+            self.Y = value
+            
+
+        self.UpdateStatusRegister(n=-3, z=-3)
         return
 
     def LSR(self, thisMode):
@@ -469,14 +509,34 @@ class CPU():
         self.RAM[address] = self.X
         return
 
+    def STY(self, thisMode):
+        if thisMode == self.adrsMode["abs"]:
+            address = self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8)
+            self.PC += 2
+
+        self.RAM[address] = self.Y
+        return
+
     def TAX(self):
         self.X = self.A
 
         self.UpdateStatusRegister(n=-2, z=-2)
         return
 
+    def TAY(self):
+        self.Y = self.A
+
+        self.UpdateStatusRegister(n=-3, z=-3)
+        return
+
     def TXA(self):
         self.A = self.X
+
+        self.UpdateStatusRegister(n=-1, z=-1)
+        return
+    
+    def TYA(self):
+        self.A = self.Y
 
         self.UpdateStatusRegister(n=-1, z=-1)
         return
@@ -502,15 +562,16 @@ class CPU():
             counter = self.resetVector
             line = f.readline()
             while True:
-                endOfFile = not line.endswith("\n")
-                if not endOfFile:
-                    line = line[:-1]
-                line = line.split()
-                for num in line:
-                    self.RAM[counter] = int(num, 16)
-                    counter += 1
-                if endOfFile:
-                    break
+                if line != '\n':
+                    endOfFile = not line.endswith("\n")
+                    if not endOfFile:
+                        line = line[:-1]
+                    line = line.split()
+                    for num in line:
+                        self.RAM[counter] = int(num, 16)
+                        counter += 1
+                    if endOfFile:
+                        break
 
                 line = f.readline()
         return
@@ -568,10 +629,14 @@ class CPU():
         elif line[0].lower() == "cmp":
             if thisMode == self.adrsMode["abs"]:
                 self.RAM[counter] = 0xCD
+            elif thisMode == self.adrsMode["abs,X"]:
+                self.RAM[counter] = 0xDD
             elif thisMode == self.adrsMode["imm"]:
                 self.RAM[counter] = 0xC9
         elif line[0].lower() == "dex":
             self.RAM[counter] = 0xCA
+        elif line[0].lower() == "dey":
+            self.RAM[counter] = 0x88
         elif line[0].lower() == "eor":
             if thisMode == self.adrsMode["abs"]:
                 self.RAM[counter] = 0x4D
@@ -579,6 +644,8 @@ class CPU():
                 self.RAM[counter] = 0x49
         elif line[0].lower() == "inx":
             self.RAM[counter] = 0xE8
+        elif line[0].lower() == "iny":
+            self.RAM[counter] = 0xC8
         elif line[0].lower() == "jmp":
             if thisMode == self.adrsMode["abs"]:
                 self.RAM[counter] = 0x4C
@@ -594,6 +661,11 @@ class CPU():
                 self.RAM[counter] = 0xAE
             elif thisMode == self.adrsMode["imm"]:
                 self.RAM[counter] = 0xA2
+        elif line[0].lower() == "ldy":
+            if thisMode == self.adrsMode["abs"]:
+                self.RAM[counter] = 0xAC
+            elif thisMode == self.adrsMode["imm"]:
+                self.RAM[counter] = 0xA0
         elif line[0].lower() == "lsr":
             if thisMode == self.adrsMode["A"]:
                 self.RAM[counter] = 0x4A
@@ -625,10 +697,17 @@ class CPU():
         elif line[0].lower() == "stx":
             if thisMode == self.adrsMode["abs"]:
                 self.RAM[counter] = 0x8E
+        elif line[0].lower() == "sty":
+            if thisMode == self.adrsMode["abs"]:
+                self.RAM[counter] = 0x8C
         elif line[0].lower() == "tax":
                 self.RAM[counter] = 0xAA
+        elif line[0].lower() == "tay":
+                self.RAM[counter] = 0xA8
         elif line[0].lower() == "txa":
                 self.RAM[counter] = 0x8A
+        elif line[0].lower() == "tya":
+                self.RAM[counter] = 0x98
 
         counter += 1
 
@@ -670,14 +749,15 @@ class CPU():
         with open(f"{os.path.dirname(os.path.realpath(__file__))}/in.txt") as f:
             line = f.readline()
             while True:
-                endOfFile = not line.endswith("\n")
-                if not endOfFile:
-                    line = line[:-1]
-                    
-                counter = self.Translate(line, counter)
+                if line != '\n':
+                    endOfFile = not line.endswith("\n")
+                    if not endOfFile:
+                        line = line[:-1]
+                        
+                    counter = self.Translate(line, counter)
 
-                if endOfFile:
-                    break
+                    if endOfFile:
+                        break
 
                 line = f.readline()
                 
@@ -738,9 +818,15 @@ class CPU():
         elif ins == 0xCD:
             thisMode = self.adrsMode["abs"]
             ins_s = "cmp"
+        elif ins == 0xDD:
+            thisMode = self.adrsMode["abs,X"]
+            ins_s = "cmp"
         elif ins == 0xCA:
             thisMode = self.adrsMode["imp"]
             ins_s = "dex"
+        elif ins == 0x88:
+            thisMode = self.adrsMode["imp"]
+            ins_s = "dey"
         elif ins == 0x49:
             thisMode = self.adrsMode["imm"]
             ins_s = "eor"
@@ -750,6 +836,9 @@ class CPU():
         elif ins == 0xE8:
             thisMode = self.adrsMode["imp"]
             ins_s = "inx"
+        elif ins == 0xC8:
+            thisMode = self.adrsMode["imp"]
+            ins_s = "iny"
         elif ins == 0x4C:
             thisMode = self.adrsMode["abs"]
             ins_s = "jmp"
@@ -768,6 +857,12 @@ class CPU():
         elif ins == 0xAE:
             thisMode = self.adrsMode["abs"]
             ins_s = "ldx"
+        elif ins == 0xA0:
+            thisMode = self.adrsMode["imm"]
+            ins_s = "ldy"
+        elif ins == 0xAC:
+            thisMode = self.adrsMode["abs"]
+            ins_s = "ldy"
         elif ins == 0x4A:
             thisMode = self.adrsMode["A"]
             ins_s = "lsr"
@@ -804,12 +899,21 @@ class CPU():
         elif ins == 0x8E:
             thisMode = self.adrsMode["abs"]
             ins_s = "stx"
+        elif ins == 0x8C:
+            thisMode = self.adrsMode["abs"]
+            ins_s = "sty"    
         elif ins == 0xAA:
             thisMode = self.adrsMode["imp"]
             ins_s = "tax"
+        elif ins == 0xA8:
+            thisMode = self.adrsMode["imp"]
+            ins_s = "tay"
         elif ins == 0x8A:
             thisMode = self.adrsMode["imp"]
             ins_s = "txa"
+        elif ins == 0x98:
+            thisMode = self.adrsMode["imp"]
+            ins_s = "tya"
         else:
             thisMode = self.adrsMode["imp"]
             ins_s = "nao"
@@ -935,14 +1039,17 @@ class CPU():
         dataIndex = 0       # starting location of data in memory displayed in debug screen
         insIndex = self.PC  # starting location of instructions in memory displayed in debug screen
         exit = False        # indicator if end the program without an ending debug screen
+        sleep = False       # if wait between stepped instructions
+        printDebug = True
 
         while True:
-            if debug == 1:
+            if debug == 1 and (printDebug or stepper == 0):
                 insIndex = self.PC
                 self.PrintDebug(insIndex, dataIndex, colors)
 
             if debug == 1 and stepper == 0:
                 # interactive debug screen
+                printDebug = True
                 execute = False # indicator if command executes another instruction
                 while not execute:
                     command = input().split()
@@ -956,6 +1063,12 @@ class CPU():
                         else:
                             stepper = int(command[1])
                             execute = True
+                            sleep = True
+                    elif command[0] == "qstep":
+                        stepper = int(command[1])
+                        execute = True
+                        sleep = False
+                        printDebug = False
                     elif command[0] == "m":
                         dataIndex = int(command[1], 16)
                         self.PrintDebug(insIndex, dataIndex, colors)
@@ -976,7 +1089,8 @@ class CPU():
                         self.PrintDebug(insIndex, dataIndex, colors)
                     
             if stepper > 0:         # if there are yet steps without debug screen to be done
-                time.sleep(0.75)
+                if sleep:
+                    time.sleep(0.75)
                 stepper -= 1
 
             ins = self.RAM[self.PC]
@@ -1012,14 +1126,20 @@ class CPU():
                 self.CMP(self.adrsMode["imm"])
             elif ins == 0xCD:
                 self.CMP(self.adrsMode["abs"])
+            elif ins == 0xDD:
+                self.CMP(self.adrsMode["abs,X"])
             elif ins == 0xCA:
                 self.DEX()
+            elif ins == 0x88:
+                self.DEY()
             elif ins == 0x49:
                 self.EOR(self.adrsMode["imm"])
             elif ins == 0x4D:
                 self.EOR(self.adrsMode["abs"])
             elif ins == 0xE8:
                 self.INX()
+            elif ins == 0xC8:
+                self.INY()
             elif ins == 0x4C:
                 self.JMP(self.adrsMode["abs"])
                 continue
@@ -1033,6 +1153,10 @@ class CPU():
                 self.LDX(self.adrsMode["imm"])
             elif ins == 0xAE:
                 self.LDX(self.adrsMode["abs"])
+            elif ins == 0xA0:
+                self.LDY(self.adrsMode["imm"])
+            elif ins == 0xAC:
+                self.LDY(self.adrsMode["abs"])
             elif ins == 0x4A:
                 self.LSR(self.adrsMode["A"])
             elif ins == 0x09:
@@ -1057,10 +1181,16 @@ class CPU():
                 self.STA(self.adrsMode["abs,X"])
             elif ins == 0x8E:
                 self.STX(self.adrsMode["abs"])
+            elif ins == 0x8C:
+                self.STY(self.adrsMode["abs"])
             elif ins == 0xAA:
                 self.TAX()
+            elif ins == 0xA8:
+                self.TAY()
             elif ins == 0x8A:
                 self.TXA()
+            elif ins == 0x98:
+                self.TYA()
             else:   # not an instruction
                 break
             
@@ -1152,3 +1282,11 @@ if correctConfig:
     cpu.Run(mode, color)
 else:
     print("Incorrect configuration in config.txt, please set up file config.txt correctly!")
+
+"""
+Fibonacci
+// vlastne hotovo, jenom zkontrolovat proc pri velkych cislech nevychazi presne, kde je chyba ve vypoctu
+chyba je nekde v carry nebo ve vypoctu u 2. bytu
+610 dava 611 tam je chyba
+
+"""

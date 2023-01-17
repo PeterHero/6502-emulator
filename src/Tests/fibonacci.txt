@@ -1,0 +1,92 @@
+ldx #$02
+stx $7fff
+
+lda #$01
+sta $0000,X
+
+ldx #$00
+
+lda $0000,X
+tay
+txa
+clc
+adc $7fff
+tax
+tya
+ldy $7ffe
+beq $03
+sec
+bcs $01
+clc
+adc $0000,X
+bcc $04
+ldy #$01
+bcs #$02
+ldy #$00
+sty $7ffe
+tay
+txa
+sec
+sbc $7fff
+tax
+tya
+sta $0000,X
+
+inx
+txa
+cmp $7fff
+bne $cc
+
+dex
+lda $0000,X
+tay
+txa
+clc
+adc $7fff
+tax
+tya
+cmp $0000,X
+bmi $7f
+
+ldx #$00
+
+lda $0000,X
+tay
+txa
+clc
+adc $7fff
+tax
+tya
+ldy $7ffe
+beq $03
+sec
+bcs $01
+clc
+adc $0000,X
+bcc $04
+ldy #$01
+bcs #$02
+ldy #$00
+sty $7ffe
+sta $0000,X
+
+inx
+txa
+sec
+sbc $7fff
+tax
+cmp $7fff
+bne $cf
+
+dex
+lda $0000,X
+tay
+txa
+clc
+adc $7fff
+tax
+tya
+cmp $0000,X
+beq $02
+bcs $03
+jmp $800a
