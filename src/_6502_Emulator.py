@@ -396,7 +396,11 @@ class CPU():
         if thisMode == self.adrsMode["abs"]:            
             address = self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8)
             self.PC += 2
-            self.Y = self.RAM[address]            
+            self.Y = self.RAM[address]
+        elif thisMode == self.adrsMode["abs,X"]:            
+            address = uint8(self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X)
+            self.PC += 2
+            self.Y = self.RAM[address] 
         elif thisMode == self.adrsMode["imm"]:
             value = self.RAM[self.PC+1]
             self.PC += 1
@@ -664,6 +668,8 @@ class CPU():
         elif line[0].lower() == "ldy":
             if thisMode == self.adrsMode["abs"]:
                 self.RAM[counter] = 0xAC
+            elif thisMode == self.adrsMode["abs,X"]:
+                self.RAM[counter] = 0xBC
             elif thisMode == self.adrsMode["imm"]:
                 self.RAM[counter] = 0xA0
         elif line[0].lower() == "lsr":
@@ -862,6 +868,9 @@ class CPU():
             ins_s = "ldy"
         elif ins == 0xAC:
             thisMode = self.adrsMode["abs"]
+            ins_s = "ldy"
+        elif ins == 0xBC:
+            thisMode = self.adrsMode["abs,X"]
             ins_s = "ldy"
         elif ins == 0x4A:
             thisMode = self.adrsMode["A"]
@@ -1157,6 +1166,8 @@ class CPU():
                 self.LDY(self.adrsMode["imm"])
             elif ins == 0xAC:
                 self.LDY(self.adrsMode["abs"])
+            elif ins == 0xBC:
+                self.LDY(self.adrsMode["abs,X"])
             elif ins == 0x4A:
                 self.LSR(self.adrsMode["A"])
             elif ins == 0x09:
