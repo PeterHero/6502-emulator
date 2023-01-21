@@ -16,8 +16,7 @@ https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
 import re
 import os
 import time
-from numpy import uint8, uint16
-import readline # only to fix bug on vs code which doesnt have internally this package
+#import readline # only to fix bug on vs code which doesnt have internally this package
 
 
 class CPU():
@@ -173,7 +172,7 @@ class CPU():
             value = self.RAM[self.PC+1]
             self.PC += 1
         elif thisMode == self.adrsMode["abs,X"]:
-            address = uint16((self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x10000)
+            address = (self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x10000
             value = self.RAM[address]
             self.PC += 2
 
@@ -181,7 +180,7 @@ class CPU():
         isValueNegative = self.IsNegative(value)
 
         sum = self.A + value + self.GetCarryFlag()
-        self.A = uint8(sum % 256)
+        self.A = sum % 0x100
 
         if sum > 255:
             cFlag = 1
@@ -224,9 +223,9 @@ class CPU():
     def BCC(self):
         if self.GetCarryFlag() == 0:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = uint16((self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
             else:
-                self.PC = uint16((self.PC + self.RAM[self.PC+1]) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1]) % 0x10000
 
         self.PC += 1
         return
@@ -234,9 +233,9 @@ class CPU():
     def BCS(self):
         if self.GetCarryFlag() == 1:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = uint16((self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
             else:
-                self.PC = uint16((self.PC + self.RAM[self.PC+1]) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1]) % 0x10000
 
         self.PC += 1
         return
@@ -244,9 +243,9 @@ class CPU():
     def BEQ(self):
         if self.GetZeroFlag() == 1:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = uint16((self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
             else:
-                self.PC = uint16((self.PC + self.RAM[self.PC+1]) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1]) % 0x10000
 
         self.PC += 1
         return
@@ -254,9 +253,9 @@ class CPU():
     def BMI(self):
         if self.GetNegativeFlag() == 1:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = uint16((self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
             else:
-                self.PC = uint16((self.PC + self.RAM[self.PC+1]) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1]) % 0x10000
 
         self.PC += 1
         return
@@ -264,9 +263,9 @@ class CPU():
     def BNE(self):
         if self.GetZeroFlag() == 0:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = uint16((self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
             else:
-                self.PC = uint16((self.PC + self.RAM[self.PC+1]) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1]) % 0x10000
 
         self.PC += 1
         return
@@ -274,9 +273,9 @@ class CPU():
     def BPL(self):
         if self.GetNegativeFlag() == 0:
             if self.IsNegative(self.RAM[self.PC+1]):
-                self.PC = uint16((self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1] - 0x100) % 0x10000
             else:
-                self.PC = uint16((self.PC + self.RAM[self.PC+1]) % 0x10000)
+                self.PC = (self.PC + self.RAM[self.PC+1]) % 0x10000
 
         self.PC += 1
         return
@@ -291,7 +290,7 @@ class CPU():
             value = self.RAM[address]
             self.PC += 2
         elif thisMode == self.adrsMode["abs,X"]:            
-            address = uint16((self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x10000)
+            address = (self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x10000
             value = self.RAM[address]
             self.PC += 2
         elif thisMode == self.adrsMode["imm"]:
@@ -308,7 +307,7 @@ class CPU():
             zFlag = 0
             cFlag = 1
 
-        result = uint8((self.A - value) % 256)
+        result = (self.A - value) % 0x100
 
         if self.IsNegative(result):
             nFlag = 1
@@ -319,13 +318,13 @@ class CPU():
         return
 
     def DEX(self):
-        self.X = uint8((self.X - 1) % 256)        
+        self.X = (self.X - 1) % 0x100
 
         self.UpdateStatusRegister(n=-2, z=-2)
         return
 
     def DEY(self):
-        self.Y = uint8((self.Y - 1) % 256)        
+        self.Y = (self.Y - 1) % 0x100
 
         self.UpdateStatusRegister(n=-3, z=-3)
         return
@@ -344,13 +343,13 @@ class CPU():
         return
 
     def INX(self):
-        self.X = uint8((self.X + 1) % 256)
+        self.X = (self.X + 1) % 0x100
 
         self.UpdateStatusRegister(n=-2, z=-2)
         return
     
     def INY(self):
-        self.Y = uint8((self.Y + 1) % 256)
+        self.Y = (self.Y + 1) % 0x100
 
         self.UpdateStatusRegister(n=-3, z=-3)
         return
@@ -367,7 +366,7 @@ class CPU():
             self.PC += 2
             self.A = self.RAM[address]
         elif thisMode == self.adrsMode["abs,X"]:            
-            address = uint16((self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x10000)
+            address = (self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x10000
             self.PC += 2
             self.A = self.RAM[address] 
         elif thisMode == self.adrsMode["imm"]:
@@ -399,7 +398,7 @@ class CPU():
             self.PC += 2
             self.Y = self.RAM[address]
         elif thisMode == self.adrsMode["abs,X"]:            
-            address = uint8((self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 256)
+            address = (self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x100
             self.PC += 2
             self.Y = self.RAM[address] 
         elif thisMode == self.adrsMode["imm"]:
@@ -443,7 +442,7 @@ class CPU():
             else:
                 cFlag = 0
 
-            self.A = (uint8((self.A << 1) % 256)) + self.GetCarryFlag()
+            self.A = ((self.A << 1) % 0x100) + self.GetCarryFlag()
 
         self.UpdateStatusRegister(n=-1, z=-1, c=cFlag)
         return
@@ -466,7 +465,7 @@ class CPU():
             value = self.RAM[address] + (self.GetCarryFlag() - 1)
             self.PC += 2
         elif thisMode == self.adrsMode["abs,X"]:
-            address = uint16((self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x10000)
+            address = (self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x10000
             value = self.RAM[address] + (self.GetCarryFlag() - 1)
             self.PC += 2
         elif thisMode == self.adrsMode["imm"]:
@@ -481,7 +480,7 @@ class CPU():
         else:
             cFlag = 0
 
-        self.A = uint8((self.A - value) % 256)
+        self.A = (self.A - value) % 0x100
 
         if isANegative != isValueNegative and isANegative != self.IsNegative(self.A):
             vFlag = 1
@@ -500,7 +499,7 @@ class CPU():
             address = self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8)
             self.PC += 2
         elif thisMode == self.adrsMode["abs,X"]:
-            address = uint16((self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x10000)
+            address = (self.RAM[self.PC+1] + (self.RAM[self.PC+2] << 8) + self.X) % 0x10000
             self.PC += 2
 
         self.RAM[address] = self.A
