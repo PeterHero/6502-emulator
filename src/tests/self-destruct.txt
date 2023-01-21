@@ -1,0 +1,4 @@
+lda #$ff
+dex
+sta $8000,X
+jmp $8002

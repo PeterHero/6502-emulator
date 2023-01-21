@@ -1,11 +1,51 @@
-lda #$01
-sta $0002
-lda $0001
-clc
-adc $0002
+lda #$05
+sta $0000
+lda #$02
 sta $0001
-lda $0001
-clc
-adc $0002
+lda #$18
 sta $0002
-jmp $8005
+lda #$E8
+sta $0003
+lda #$01
+sta $0004
+lda #$03
+sta $0005
+lda #$12
+sta $0006
+
+lda #$07
+sta $7fff
+
+ldx #$00
+lda $0000,X
+inx
+cmp $0000,X
+beq #$16
+bcc #$14
+tay
+lda $0000,X
+dex
+sta $0000,X
+tya
+inx
+sta $0000,X
+ldy $7ffe
+iny
+sty $7ffe
+
+inx
+txa
+cmp $7fff
+beq $04
+dex
+clc
+bcc $d6
+dex
+
+
+lda $7ffe
+beq $08
+lda #$00
+sta $7ffe
+clc
+bcc $c6
